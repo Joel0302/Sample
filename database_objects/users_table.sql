@@ -3,5 +3,5 @@ CREATE OR REPLACE TABLE SALES_PROJECT.DETAILS (
     Phone STRING(50),
     Emp_id STRING(50),
     LAST_LOGIN TIMESTAMP_NTZ,
-    Loaddate Varchar(55)
+    Loaddate Varchar(255)
 );
