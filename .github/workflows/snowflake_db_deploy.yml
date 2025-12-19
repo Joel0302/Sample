@@ -1,0 +1,29 @@
+name: Snowflake DDL Deploy
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'database_objects/**' ] # Only runs if files in this folder change
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Snowflake CLI
+        uses: snowflakedb/snowflake-cli-action@v1.5
+        with:
+          cli-version: "latest"
+
+      - name: Execute SQL
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SF_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SF_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SF_PASSWORD }}
+          SNOWFLAKE_DATABASE: ${{ secrets.SF_DATABASE }}
+          SNOWFLAKE_SCHEMA: ${{ secrets.SF_SCHEMA }}
+        run: |
+          # Executes all SQL files in the directory
+          for f in database_objects/*.sql; do
+            snow sql -f "$f"
+          done
