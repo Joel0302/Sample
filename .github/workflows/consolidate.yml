@@ -19,7 +19,13 @@ jobs:
       - name: Combine SQL Scripts
         run: |
           echo "-- Consolidated Script Generated: $(date)" > consolidated_deploy.sql
-          cat script1.sql script2.sql >> consolidated_deploy.sql
+          
+          echo "-- Content from script1 --" >> consolidated_deploy.sql
+          cat script1.sql >> consolidated_deploy.sql
+          echo -e "\n" >> consolidated_deploy.sql  # Adds a physical gap
+          
+          echo "-- Content from script2 --" >> consolidated_deploy.sql
+          cat script2.sql >> consolidated_deploy.sql
 
       # 3. Push the new file to the 'release' branch
       - name: Deploy to Release Branch
