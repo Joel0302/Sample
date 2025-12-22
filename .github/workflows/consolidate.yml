@@ -1,0 +1,37 @@
+name: SQL Consolidation Pipeline
+
+on:
+  push:
+    branches:
+      - adhoc  # Trigger when you push to develop
+
+jobs:
+  merge-sql:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Pull the code from the 'develop' branch
+      - name: Checkout Source
+        uses: actions/checkout@v4
+        with:
+          ref: adhoc
+
+      # 2. Combine the files in a specific order
+      - name: Combine SQL Scripts
+        run: |
+          echo "-- Consolidated Script Generated: $(date)" > consolidated_deploy.sql
+          cat script1.sql script2.sql >> consolidated_deploy.sql
+
+      # 3. Push the new file to the 'release' branch
+      - name: Deploy to Release Branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Force fetch and switch to release branch
+          git fetch origin
+          git checkout release || git checkout -b release
+          
+          # Add the new file and push
+          git add consolidated_deploy.sql
+          git commit -m "Auto-consolidated SQL scripts from develop"
+          git push origin release --force
