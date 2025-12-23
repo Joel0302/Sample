@@ -27,17 +27,17 @@ jobs:
           echo "-- Content from script2 --" >> consolidated_deploy.sql
           cat script2.sql >> consolidated_deploy.sql
 
-      # 3. Push the new file to the 'release' branch
-      - name: Deploy to Release Branch
+      # 3. Push the new file to the 'adhoc' branch itself
+      - name: Deploy to Adhoc Branch
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           # Force fetch and switch to release branch
           git fetch origin
-          git checkout release || git checkout -b release
+          git checkout adhoc || git checkout -b release
           
           # Add the new file and push
           git add consolidated_deploy.sql
           git commit -m "Auto-consolidated SQL scripts from develop"
-          git push origin release --force
+          git push origin adhoc --force
