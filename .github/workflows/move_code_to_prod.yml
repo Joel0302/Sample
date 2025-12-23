@@ -115,6 +115,139 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION}}   #us-east-1 
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET_PROD }}     #"testwingspan" 
+          DEVOPS_DIR: devops 
+          directory: "temp_dags"
+        run: |
+          pip install boto3
+          python ${{ env.DEVOPS_DIR }}/upolad_content_to_s3.py
+
+
+
+
+
+ 
+
+
+          
+name: Move-Code-To-Deploy-PROD
+# on:  [pull]   
+on:
+#   schedule:
+#     - cron: '30 5 * * 1' 
+  # move code only when there is pull request into QA Branch.
+  pull_request:
+    branches:
+      - 'main' 
+    paths:
+    - 'dags/**'
+    - 'utils/**'
+    - 'sql/**' 
+    - 'plugins/**'
+  # merge_group:
+  #   types: [checks_requested]  
+  workflow_dispatch:
+
+jobs:  
+   Move-Code-To-Deploy-PROD:    
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3         
+        with:
+          fetch-depth: 2   # 0 will get entire history  
+        
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.8' 
+          
+      - name: Install dependencies
+        run:  |
+          python -m pip install --upgrade pip
+          
+      - name: 1Find Difference between branch and commit
+        id: Finddiff        
+        run:  echo "::set-output name=fileswithdepth::$(git diff --name-status ${{ github.event.before }} ${{ github.sha }} | xargs)"          
+        #run:  echo "::set-output name=fileswithdepth::$(git diff --name-only origin/main origin/${GITHUB_HEAD_REF} | xargs)"          
+        shell: bash
+      - name: 2get changed files
+        id: getfile
+        run: |
+          echo "::set-output name=files::$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | xargs)"
+      - name: 2echo output
+        run: |
+          echo ${{ steps.getfile.outputs.files }} 
+      # - name: get changed files
+      #   id: files
+      #   uses: jitterbit/get-changed-files@v1
+      #   with:
+      #     format: 'csv'
+          #format: 'json'
+      # - name: assign change files
+      #   id: changef
+      #   run: |
+      #       readarray -t added_modified <<<"$(jq -r '.[]' <<<'${{ steps.files.outputs.added_modified }}')"
+      #       echo "$(added_modified)"
+      #       echo "::set-output name=addmodfiles:: ${added_modified}."
+        
+      - name: Move the files to temp directory
+        id: Movefiles    
+        run:  |        
+          echo "Files in previous versus current version: ${{ steps.Finddiff.outputs.fileswithdepth }} "    
+          # echo "Files modified in current check in: ${{steps.files.outputs.added_modified}} "
+          mkdir -p temp_dags/{utils,plugins,sql}  
+          myarray="${{ steps.Finddiff.outputs.fileswithdepth }}"
+          changelist=(${myarray// / })
+          len=${#changelist[@]}
+          echo "${myarray} has ${len} elements"    
+          for ((i=0; i<${len}; i++)) ; do
+            case "${changelist[$i]}" in
+              A | M | C | T | "R100" )
+                if [ "${changelist[$i]}" = "R100" ]; then  
+                  change_file="${changelist[$i+2]}"
+                  file_path=$(dirname "${changelist[$i+2]}")
+                  file_name=$(basename "${changelist[$i+2]}")
+                else
+                  change_file="${changelist[$i+1]}"
+                  file_path=$(dirname "${changelist[$i+1]}")
+                  file_name=$(basename "${changelist[$i+1]}") 
+                fi
+                 IFS='/'
+                read -a root <<< "${file_path}"
+                # root="${file_path##*/}"
+                echo "${file_path} and ${file_name} with root as ${root[0]}"
+                case  "${root[0]}" in 
+                  "dags") 
+                    echo "  > DAG loop:${file_path}/${file_name}."   
+                    cp "${change_file}" temp_dags/ 
+                    ;;
+                  sql |  utils) 
+                    echo "  > OUT loop:${file_path}/${file_name}." 
+                    mkdir -p temp_dags/${file_path}  
+                    cp --parents "${change_file}" "temp_dags"   
+                    echo "file temp_dags/${file_path}  created"
+                    ;; 
+                esac
+                ;;
+              R | D)
+                echo "-- ${changelist[$i+1]} no action done. "
+                ;;
+              esac
+          done
+          
+          #cp utils/* temp_dags/utils/
+          #cp plugins/* temp_dags/plugins/
+          ls -R temp_dags/
+          cd temp_dags
+        
+        
+      - name: Upload S3
+        id: upload # specify some ID for use in subsequent steps
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION}}   
           AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET_PROD }}    
           DEVOPS_DIR: devops 

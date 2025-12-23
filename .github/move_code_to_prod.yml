@@ -9,9 +9,7 @@ on:
       - 'main' 
     paths:
     - 'dags/**'
-    - 'utils/**'
     - 'sql/**' 
-    - 'plugins/**'
   # merge_group:
   #   types: [checks_requested]  
   workflow_dispatch:
@@ -131,3 +129,4 @@ jobs:
 
 
           
+
