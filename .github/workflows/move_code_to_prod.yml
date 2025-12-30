@@ -6,7 +6,9 @@ on:
       - 'main'
     paths:
       - 'dags/**'
+      - 'utils/**'
       - 'sql/**'
+      - 'plugins/**'
   workflow_dispatch:
 
 jobs:
@@ -16,56 +18,68 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # Fetches all history so git diff can compare branches
+          fetch-depth: 0 # Changed to 0 to ensure git diff works
 
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
           python-version: '3.8'
 
-      - name: Calculate Changed Files
-        id: diff
+      - name: Install dependencies
         run: |
-          # Compare the current state (HEAD) with the target branch (origin/main)
-          FILES=$(git diff --name-status origin/main HEAD | xargs)
-          echo "fileswithdepth=$FILES" >> $GITHUB_OUTPUT
+          python -m pip install --upgrade pip
+          pip install boto3
+
+      - name: 1Find Difference between branch and commit
+        id: Finddiff
+        run: |
+          # Updated to use $GITHUB_OUTPUT instead of deprecated ::set-output
+          DIFF=$(git diff --name-status ${{ github.event.before }} ${{ github.sha }} | xargs)
+          echo "fileswithdepth=$DIFF" >> $GITHUB_OUTPUT
         shell: bash
 
-      - name: Move files to temp directory
+      - name: Move the files to temp directory
+        id: Movefiles
         run: |
-          mkdir -p temp_dags
+          echo "Files: ${{ steps.Finddiff.outputs.fileswithdepth }}"
+          mkdir -p temp_dags/utils temp_dags/plugins temp_dags/sql
           
-          # Convert the string of files into an array
-          IFS=' ' read -r -a changelist <<< "${{ steps.diff.outputs.fileswithdepth }}"
+          myarray="${{ steps.Finddiff.outputs.fileswithdepth }}"
+          changelist=(${myarray// / })
+          len=${#changelist[@]}
           
-          for ((i=0; i<${#changelist[@]}; i++)); do
+          for ((i=0; i<${len}; i++)) ; do
             case "${changelist[$i]}" in
-              A|M|C|T|R100)
-                # Determine file path based on status
+              A | M | C | T | "R100" )
                 if [ "${changelist[$i]}" = "R100" ]; then
-                  file="${changelist[$i+2]}"
-                  i=$((i+2)) # Skip ahead
+                  change_file="${changelist[$i+2]}"
                 else
-                  file="${changelist[$i+1]}"
-                  i=$((i+1))
+                  change_file="${changelist[$i+1]}"
                 fi
-
-                # Only copy if file exists and is in monitored directories
-                if [[ "$file" == dags/* ]] || [[ "$file" == sql/* ]] || [[ "$file" == utils/* ]]; then
-                  echo "Copying $file to temp_dags/"
-                  mkdir -p "temp_dags/$(dirname "$file")"
-                  cp "$file" "temp_dags/$file"
-                fi
+                
+                file_path=$(dirname "$change_file")
+                root=$(echo "$file_path" | cut -d'/' -f1)
+                
+                case "$root" in
+                  "dags")
+                    cp "$change_file" temp_dags/
+                    ;;
+                  "sql" | "utils")
+                    mkdir -p "temp_dags/$file_path"
+                    cp "$change_file" "temp_dags/$change_file"
+                    ;;
+                esac
                 ;;
             esac
           done
+          ls -R temp_dags/
 
-      - name: Upload to S3
+      - name: Upload S3
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
           AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET_PROD }}
+          DEVOPS_DIR: devops
         run: |
-          pip install boto3
-          python devops/upload_content_to_s3.py
+          python ${{ env.DEVOPS_DIR }}/upload_content_to_s3.py
