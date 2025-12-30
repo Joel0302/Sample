@@ -21,7 +21,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3         
         with:
-          fetch-depth: 2   # 0 will get entire history  
+          fetch-depth: 0   # 0 will get entire history  
         
       - name: Set up Python
         uses: actions/setup-python@v3
@@ -34,8 +34,8 @@ jobs:
           
       - name: 1Find Difference between branch and commit
         id: Finddiff        
-        run:  echo "::set-output name=fileswithdepth::$(git diff --name-status ${{ github.event.before }} ${{ github.sha }} | xargs)"          
-        #run:  echo "::set-output name=fileswithdepth::$(git diff --name-only origin/main origin/${GITHUB_HEAD_REF} | xargs)"          
+        #run:  echo "::set-output name=fileswithdepth::$(git diff --name-status ${{ github.event.before }} ${{ github.sha }} | xargs)"          
+        run:  echo "::set-output name=fileswithdepth::$(git diff --name-only origin/main origin/${GITHUB_HEAD_REF} | xargs)"          
         shell: bash
       - name: 2get changed files
         id: getfile
@@ -129,4 +129,5 @@ jobs:
 
 
           
+
 
