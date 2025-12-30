@@ -3,7 +3,7 @@ from airflow.decorators import dag, task
 
 # Define default arguments for the DAG
 default_args = {
-    'owner': 'airflow',
+    'owner': 'airflo_sample',
     'depends_on_past': True,
     'retries': 1,
     'retry_delay': timedelta(minutes=10),
