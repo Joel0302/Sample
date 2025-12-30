@@ -6,7 +6,7 @@ default_args = {
     'owner': 'airflow',
     'depends_on_past': True,
     'retries': 1,
-    'retry_delay': timedelta(minutes=5),
+    'retry_delay': timedelta(minutes=10),
 }
 
 @dag(
