@@ -46,7 +46,9 @@ def upload_folder(directory, s3_prefix):
 upload_folder("temp_dags", "dags/")
 
 # 2. Upload Utils
-upload_folder("temp_dags/utils", "dags/utils/")
+upload_folder("temp_dags/utils", "utils/")
 
 # 3. Upload SQL (preserving structure)
-upload_folder("temp_dags/sql", "dags/sql/")
+upload_folder("temp_dags/sql", "sql/")
+
+upload_folder("temp_dags/plugins", "plugins/")
