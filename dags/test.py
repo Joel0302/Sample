@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from airflow.decorators import dag, task
+from airflow.decorators import dag
 
 # Define default arguments for the DAG
 default_args = {
