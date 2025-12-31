@@ -97,6 +97,7 @@ jobs:
           done
           
           ls -R temp_dags/
+          cd temp_dags
         
       - name: Upload S3
         id: upload
