@@ -1,8 +1,6 @@
 #python code
 a=env
-
-env=b
-
+joel=kishore
 c= env
 
 
