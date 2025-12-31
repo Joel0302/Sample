@@ -1,7 +1,6 @@
 #python code
 a=env
-joel=kishore
-c= env
+c=clock
 
 
 d=constant
