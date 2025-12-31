@@ -28,7 +28,7 @@ def simple_etl():
     @task()
     def transform(raw_data: dict):
         """Simulate transforming data (doubling values)."""
-        transformed_data = [x * 2 for x in raw_data["data"]]
+        transformed_data = [x * 3 for x in raw_data["data"]]
         return transformed_data
 
     @task()
