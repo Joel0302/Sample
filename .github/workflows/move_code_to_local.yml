@@ -39,7 +39,7 @@ jobs:
       - name: 1Find Difference between branch and commit
         id: Finddiff        
         run: |
-          DIFF_CONTENT=$(git diff --name-status ${{ github.event.before }} ${{ github.sha }} | xargs)
+          DIFF_CONTENT=$(git diff --name-status origin/main...HEAD | xargs)
           echo "fileswithdepth=$DIFF_CONTENT" >> $GITHUB_OUTPUT
         shell: bash
 
