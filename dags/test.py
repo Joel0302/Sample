@@ -23,7 +23,7 @@ def simple_etl():
     @task()
     def extract():
         """Simulate extracting data."""
-        return {"data": [10, 20, 30, 40]}
+        return {"data": [10, 20, 30, 50]}
 
     @task()
     def transform(raw_data: dict):
