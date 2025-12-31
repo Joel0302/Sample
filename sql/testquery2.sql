@@ -6,3 +6,5 @@ select 'mario';
 select 'campion';
 
 select 'sairam';
+
+select 'msd';
