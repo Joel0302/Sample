@@ -1,6 +1,4 @@
-
 env=b
-
 c= env
 
 
