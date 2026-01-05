@@ -17,8 +17,10 @@ s3_client = boto3.client("s3", region_name="us-east-1", aws_access_key_id=key, a
 
 directory = "temp_dags"
 for filename in os.listdir(directory):
+	file_full_path = os.path.join(directory, filename)
     if filename == "delete_list.txt" or not os.path.isfile(os.path.join(directory, filename)):
         continue
+	print(f"Uploading: {file_full_path}")	
 
     f = os.path.join(directory, filename)
     print(f"Checking file: {f}")
