@@ -89,5 +89,6 @@ if os.path.exists(delete_file):
                     s3_client.delete_object(Bucket=s3bucket, Key=s3_key)
                 except Exception as e:
                     print(f"Error deleting {s3_key}: {e}")
+	os.remove(delete_file)
 # --- END DELETION LOGIC ---
 
