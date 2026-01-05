@@ -58,42 +58,50 @@ jobs:
         run: |        
           echo "Files in previous versus current version: ${{ steps.Finddiff.outputs.fileswithdepth }} "    
           mkdir -p temp_dags/{utils,plugins,sql}  
+          touch temp_dags/delete_list.txt
           myarray="${{ steps.Finddiff.outputs.fileswithdepth }}"
           changelist=(${myarray// / })
           len=${#changelist[@]}
-          echo "${myarray} has ${len} elements"    
+          
           for ((i=0; i<${len}; i++)) ; do
             case "${changelist[$i]}" in
               A | M | C | T | "R100" )
                 if [ "${changelist[$i]}" = "R100" ]; then  
                   change_file="${changelist[$i+2]}"
-                  file_path=$(dirname "${changelist[$i+2]}")
-                  file_name=$(basename "${changelist[$i+2]}")
                 else
                   change_file="${changelist[$i+1]}"
-                  file_path=$(dirname "${changelist[$i+1]}")
-                  file_name=$(basename "${changelist[$i+1]}") 
                 fi
+                
+                file_path=$(dirname "$change_file")
+                file_name=$(basename "$change_file")
+
+                # --- NEW DELETION LOGIC ---
+                if [[ "$file_name" == retd_* ]]; then
+                  target_name="${file_name#retd_}"
+                  # Determine S3 path based on folder
+                  if [[ "$change_file" == dags/* ]]; then
+                    echo "dags/$target_name" >> temp_dags/delete_list.txt
+                  else
+                    echo "dags/$file_path/$target_name" >> temp_dags/delete_list.txt
+                  fi
+                  echo "Marked for deletion: $target_name"
+                  continue
+                fi
+                # --- END DELETION LOGIC ---
+
                 IFS='/'
                 read -a root <<< "${file_path}"
-                echo "${file_path} and ${file_name} with root as ${root[0]}"
                 case  "${root[0]}" in 
                   "dags") 
-                    echo "  > DAG loop:${file_path}/${file_name}."   
                     cp "${change_file}" temp_dags/ 
                     ;;
                   sql | utils) 
-                    echo "  > OUT loop:${file_path}/${file_name}." 
                     mkdir -p temp_dags/${file_path}  
                     cp --parents "${change_file}" "temp_dags"   
-                    echo "file temp_dags/${file_path} created"
                     ;; 
                 esac
                 ;;
-              R | D)
-                echo "-- ${changelist[$i+1]} no action done. "
-                ;;
-              esac
+            esac
           done
           
           ls -R temp_dags/
