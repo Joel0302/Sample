@@ -17,18 +17,17 @@ s3_client = boto3.client("s3", region_name="us-east-1", aws_access_key_id=key, a
 
 directory = "temp_dags"
 for filename in os.listdir(directory):
-	if filename == "delete_list.txt" or not os.path.isfile(os.path.join(directory, filename)):
-		continue
+    if filename == "delete_list.txt" or not os.path.isfile(os.path.join(directory, filename)):
+        continue
+
     f = os.path.join(directory, filename)
-    # checking if it is a file
-    if os.path.isfile(f):
-        print(f)
-        try:
-            response = s3_client.upload_file(f, s3bucket, "dags/" + filename)
-        except ClientError as e:
-            print(e)
-        except FileNotFoundError as e:
-            print(e)
+    print(f"Checking file: {f}")
+    try:
+        response = s3_client.upload_file(f, s3bucket, "dags/" + filename)
+    except ClientError as e:
+        print(f"ClientError: {e}")
+    except FileNotFoundError as e:
+        print(f"FileNotFoundError: {e}")
 directory = "temp_dags/utils"
 for filename in os.listdir(directory):
     f = os.path.join(directory, filename)
