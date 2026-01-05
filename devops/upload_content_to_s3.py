@@ -74,5 +74,20 @@ for root,dirname,filename in os.walk(directory):
 #for root,d_names,f_names in os.walk(path):#
 	#for f in f_names:
 
+# ... (Keep all your existing upload loops above) ...
 
+# --- NEW DELETION LOGIC ---
+delete_file = "temp_dags/delete_list.txt"
+if os.path.exists(delete_file):
+    print("Checking for files to delete...")
+    with open(delete_file, "r") as f:
+        for line in f:
+            s3_key = line.strip()
+            if s3_key:
+                try:
+                    print(f"Deleting: {s3_key}")
+                    s3_client.delete_object(Bucket=s3bucket, Key=s3_key)
+                except Exception as e:
+                    print(f"Error deleting {s3_key}: {e}")
+# --- END DELETION LOGIC ---
 
