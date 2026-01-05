@@ -18,7 +18,7 @@ s3_client = boto3.client("s3", region_name="us-east-1", aws_access_key_id=key, a
 directory = "temp_dags"
 for filename in os.listdir(directory):
 	if filename == "delete_list.txt" or not os.path.isfile(os.path.join(directory, filename)):
-        continue
+		continue
     f = os.path.join(directory, filename)
     # checking if it is a file
     if os.path.isfile(f):
