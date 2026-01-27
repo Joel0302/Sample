@@ -7,3 +7,4 @@ c= env
 
 
 d=constant
+cricket=india
