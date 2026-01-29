@@ -62,17 +62,15 @@ if os.path.exists(directory):
             except FileNotFoundError as e:
                 print(e)
 
-delete_file = "temp_dags/delete_list.txt"
-if os.path.exists(delete_file):
-    print("Checking for files to delete...")
-    with open(delete_file, "r") as f:
+# Process deletions for files marked with retd_
+delete_list = "temp_dags/delete_list.txt"
+if os.path.exists(delete_list):
+    with open(delete_list, "r") as f:
         for line in f:
-            s3_key = line.strip()
-            if s3_key:
+            target_key = line.strip()
+            if target_key:
                 try:
-                    print(f"Deleting from S3: {s3_key}")
-                    s3_client.delete_object(Bucket=s3bucket, Key=s3_key)
+                    s3_client.delete_object(Bucket=s3bucket, Key=target_key)
+                    print(f"Deleted from S3: {target_key}")
                 except Exception as e:
-                    print(f"Error deleting {s3_key}: {e}")
-    os.remove(delete_file)
-    print("Cleanup successful: delete_list.txt removed.")
+                    print(f"Delete failed for {target_key}: {e}")
