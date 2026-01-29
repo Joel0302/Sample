@@ -74,32 +74,25 @@ jobs:
                 
                 file_path=$(dirname "$change_file")
                 file_name=$(basename "$change_file")
-
-                # --- NEW DELETION LOGIC ---
+                
                 if [[ "$file_name" == retd_* ]]; then
-                  target_name="${file_name#retd_}"
-                  # Determine S3 path based on folder
-                  if [[ "$change_file" == dags/* ]]; then
-                    echo "dags/$target_name" >> temp_dags/delete_list.txt
-                  else
-                    echo "dags/$file_path/$target_name" >> temp_dags/delete_list.txt
-                  fi
-                  echo "Marked for deletion: $target_name"
-                  continue
-                fi
-                # --- END DELETION LOGIC ---
-
-                IFS='/'
-                read -a root <<< "${file_path}"
-                case  "${root[0]}" in 
-                  "dags") 
-                    cp "${change_file}" temp_dags/ 
+                  # Map path to S3: prepend 'dags/' if the file isn't already in the dags folder
+                  [[ "$change_file" == dags/* ]] && s3_path="$change_file" || s3_path="dags/$change_file"
+                  echo "$s3_path" >> temp_dags/delete_list.txt
+                else
+                  file_path=$(dirname "$change_file")
+                  IFS='/' 
+                  read -a root <<< "${file_path}"
+                  case  "${root[0]}" in 
+                    "dags") 
+                      cp "${change_file}" temp_dags/ 
                     ;;
-                  sql | utils) 
-                    mkdir -p temp_dags/${file_path}  
-                    cp --parents "${change_file}" "temp_dags"   
+                   sql | utils) 
+                     mkdir -p temp_dags/${file_path}  
+                     cp --parents "${change_file}" "temp_dags"   
                     ;; 
-                esac
+                  esac
+                fi
                 ;;
             esac
           done
