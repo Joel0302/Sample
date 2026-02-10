@@ -74,18 +74,34 @@ jobs:
                 
                 file_path=$(dirname "$change_file")
                 file_name=$(basename "$change_file")
-                
-                if [[ "$file_name" == retd_* ]]; then
-                  # Map path to S3: prepend 'dags/' if the file isn't already in the dags folder
-                  [[ "$change_file" == dags/* ]] && s3_path="$change_file" || s3_path="dags/$change_file"
-                  echo "$s3_path" >> temp_dags/delete_list.txt
-                else
-                  file_path=$(dirname "$change_file")
-                  IFS='/' 
-                  read -a root <<< "${file_path}"
-                  case  "${root[0]}" in 
-                    "dags") 
-                      cp "${change_file}" temp_dags/ 
+
+               # --- NEW DELETION LOGIC ---
+               if [[ "$file_name" == retd_* ]]; then
+                target_name="${file_name#retd_}"
+  
+                  # Map GitHub root folders to S3 keys
+                  case "${root[0]}" in
+                    "dags")
+                    # GitHub: dags/my_dag.py -> S3: dags/my_dag.py
+                    # $file_path here is already 'dags/...' or just 'dags'
+                    echo "$file_path/$target_name" >> temp_dags/delete_list.txt
+                    ;;
+                    "sql" | "utils" | "plugins")
+                    # GitHub: sql/query.sql -> S3: dags/sql/query.sql
+                    echo "dags/$file_path/$target_name" >> temp_dags/delete_list.txt
+                    ;;
+                    esac
+  
+                    echo "Marked for S3 deletion: $(tail -n 1 temp_dags/delete_list.txt)"
+                    continue
+                fi
+                # --- END DELETION LOGIC ---
+
+                IFS='/'
+                read -a root <<< "${file_path}"
+                case  "${root[0]}" in 
+                  "dags") 
+                    cp "${change_file}" temp_dags/ 
                     ;;
                    sql | utils) 
                      mkdir -p temp_dags/${file_path}  
