@@ -3,7 +3,5 @@ a=env
 
 env=b
 
-c= env
-
-
+c= environ
 d=constant
