@@ -1,1 +1,2 @@
-
+a=variablesample
+print("Success")
