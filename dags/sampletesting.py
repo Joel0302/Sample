@@ -1,2 +1,2 @@
 a=variablesample
-print("Success")
+print("Success!!")
