@@ -103,11 +103,12 @@ jobs:
                   "dags") 
                     cp "${change_file}" temp_dags/ 
                     ;;
-                  sql | utils) 
-                    mkdir -p temp_dags/${file_path}  
-                    cp --parents "${change_file}" "temp_dags"   
+                   sql | utils) 
+                     mkdir -p temp_dags/${file_path}  
+                     cp --parents "${change_file}" "temp_dags"   
                     ;; 
-                esac
+                  esac
+                fi
                 ;;
             esac
           done
