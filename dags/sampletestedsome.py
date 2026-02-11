@@ -1,1 +1,1 @@
-select 'samplecontent';
+print("Samplecontent")
