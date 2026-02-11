@@ -58,6 +58,10 @@ jobs:
           echo "Files in previous versus current version: ${{ steps.Finddiff.outputs.fileswithdepth }} "    
           # echo "Files modified in current check in: ${{steps.files.outputs.added_modified}} "
           mkdir -p temp_dags/{utils,plugins,sql}  
+          
+          # Initialize the delete list for the Python script
+          touch temp_dags/delete_list.txt
+          
           myarray="${{ steps.Finddiff.outputs.fileswithdepth }}"
           changelist=(${myarray// / })
           len=${#changelist[@]}
@@ -78,6 +82,16 @@ jobs:
                 read -a root <<< "${file_path}"
                 # root="${file_path##*/}"
                 echo "${file_path} and ${file_name} with root as ${root[0]}"
+                
+                # Identify files starting with retd_ for deletion
+                if [[ $file_name == retd_* ]]; then
+                  if [ "${root[0]}" = "dags" ]; then
+                     echo "dags/$file_name" >> temp_dags/delete_list.txt
+                  elif [[ "${root[0]}" == "sql" || "${root[0]}" == "utils" ]]; then
+                     echo "dags/$change_file" >> temp_dags/delete_list.txt
+                  fi
+                fi
+                
                 case  "${root[0]}" in 
                   "dags") 
                     echo "  > DAG loop:${file_path}/${file_name}."   
