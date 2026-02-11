@@ -59,8 +59,8 @@ jobs:
           # echo "Files modified in current check in: ${{steps.files.outputs.added_modified}} "
           mkdir -p temp_dags/{utils,plugins,sql}  
           
-          # Initialize the delete list for the Python script
-          touch temp_dags/delete_list.txt
+          # CREATE THE FILE OUTSIDE temp_dags
+          touch ./delete_list.txt
           
           myarray="${{ steps.Finddiff.outputs.fileswithdepth }}"
           changelist=(${myarray// / })
@@ -85,16 +85,13 @@ jobs:
                 
                 # Identify files starting with retd_ for deletion
                 if [[ $file_name == retd_* ]]; then
-                  # Remove the 'retd_' prefix to find the actual S3 key to delete
                   original_name=${file_name#retd_}
                   if [ "${root[0]}" = "dags" ]; then
-                     echo "dags/$original_name" >> temp_dags/delete_list.txt
+                     echo "dags/$original_name" >> ./delete_list.txt
                   elif [[ "${root[0]}" == "sql" || "${root[0]}" == "utils" ]]; then
-                     # For subdirectories, we need to rebuild the path without retd_
                      original_path="${file_path}/${original_name}"
-                     echo "dags/$original_path" >> temp_dags/delete_list.txt
+                     echo "dags/$original_path" >> ./delete_list.txt
                   fi
-                  echo "Marked $original_name for deletion from S3"
                 fi
                 
                 case  "${root[0]}" in 
