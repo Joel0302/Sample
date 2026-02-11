@@ -1,1 +1,1 @@
-select 'omni' as source from table;
+select 'omni' as source from sampletable;
