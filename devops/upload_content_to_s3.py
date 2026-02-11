@@ -58,3 +58,15 @@ for root,dirname,filename in os.walk(directory):
             print(e)
         except FileNotFoundError as e:
             print(e)
+# Process deletions for files marked with retd_
+delete_list = "temp_dags/delete_list.txt"
+if os.path.exists(delete_list):
+    with open(delete_list, "r") as f:
+        for line in f:
+            target_key = line.strip()
+            if target_key:
+                try:
+                    s3_client.delete_object(Bucket=s3bucket, Key=target_key)
+                    print(f"Deleted from S3: {target_key}")
+                except Exception as e:
+                    print(f"Delete failed for {target_key}: {e}")
