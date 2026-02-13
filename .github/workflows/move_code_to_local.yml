@@ -85,13 +85,16 @@ jobs:
                 
                 # Identify files starting with retd_ for deletion
                 if [[ $file_name == retd_* ]]; then
-                  original_name=${file_name#retd_}
-                  if [ "${root[0]}" = "dags" ]; then
+                   # Remove the 'retd_' prefix to find the actual file name to delete in S3
+                   original_name=${file_name#retd_}
+                   if [ "${root[0]}" = "dags" ]; then
+                     # If in dags root: dags/my_dag.py
                      echo "dags/$original_name" >> ./delete_list.txt
-                  elif [[ "${root[0]}" == "sql" || "${root[0]}" == "utils" ]]; then
-                     original_path="${file_path}/${original_name}"
-                     echo "dags/$original_path" >> ./delete_list.txt
-                  fi
+                   else
+                     # If in subfolders: dags/sql/folder/file.sql
+                     echo "dags/${file_path}/${original_name}" >> ./delete_list.txt
+                   fi
+                   echo "Marked for deletion: $original_name"
                 fi
                 
                 case  "${root[0]}" in 
