@@ -65,6 +65,22 @@ if os.path.exists(directory):
             except Exception as e:
                 print(f"Error uploading {file}: {e}")
 
+
+delete_list_path = "./delete_list.txt" 
+if os.path.exists(delete_list_path):
+    print("--- Starting S3 Deletion Process ---")
+    with open(delete_list_path, "r") as f:
+        # Using set() to avoid deleting the same file twice if it appeared multiple times
+        delete_keys = set(line.strip() for line in f if line.strip())
+        
+        for target_key in delete_keys:
+            try:
+                # This deletes the specific file key from S3
+                s3_client.delete_object(Bucket=s3bucket, Key=target_key)
+                print(f"Successfully deleted from S3: {target_key}")
+            except Exception as e:
+                print(f"Delete failed for {target_key}: {e}")                
+'''
 # --- SECTION 2: DELETIONS ---
 delete_list_path = "./delete_list.txt"
 if os.path.exists(delete_list_path):
@@ -80,3 +96,5 @@ if os.path.exists(delete_list_path):
                     print(f"Delete failed for {target_key}: {e}")
 else:
     print("No delete_list.txt found. Skipping deletions.")
+'''
+

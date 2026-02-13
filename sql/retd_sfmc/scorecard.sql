@@ -1,1 +1,1 @@
-select * froim tablename;
+select * from tablename;
