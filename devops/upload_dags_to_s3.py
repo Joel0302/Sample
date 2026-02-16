@@ -65,7 +65,32 @@ if os.path.exists(directory):
             except Exception as e:
                 print(f"Error uploading {file}: {e}")
 
+def delete_s3_prefix(bucket, prefix):
+    """Deletes all objects in S3 starting with the given prefix (folder)."""
+    paginator = s3_client.get_paginator('list_objects_v2')
+    pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
 
+    for page in pages:
+        if 'Contents' in page:
+            delete_keys = [{'Key': obj['Key']} for obj in page['Contents']]
+            s3_client.delete_objects(Bucket=bucket, Delete={'Objects': delete_keys})
+            print(f"Deleted batch of files from: {prefix}")
+
+# --- UPDATED DELETION PROCESS ---
+if os.path.exists(delete_list_path):
+    with open(delete_list_path, "r") as f:
+        delete_targets = set(line.strip() for line in f if line.strip())
+        
+        for target in delete_targets:
+            # If it looks like a file (has an extension), delete normally
+            if "." in os.path.basename(target):
+                s3_client.delete_object(Bucket=s3bucket, Key=target)
+            else:
+                # If it's a folder, delete everything inside
+                # Ensure folder prefix ends with /
+                folder_prefix = target if target.endswith('/') else target + '/'
+                delete_s3_prefix(s3bucket, folder_prefix)
+'''
 delete_list_path = "./delete_list.txt" 
 if os.path.exists(delete_list_path):
     print("--- Starting S3 Deletion Process ---")
@@ -80,7 +105,7 @@ if os.path.exists(delete_list_path):
                 print(f"Successfully deleted from S3: {target_key}")
             except Exception as e:
                 print(f"Delete failed for {target_key}: {e}")                
-'''
+
 # --- SECTION 2: DELETIONS ---
 delete_list_path = "./delete_list.txt"
 if os.path.exists(delete_list_path):
