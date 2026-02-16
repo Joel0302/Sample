@@ -82,21 +82,14 @@ jobs:
                 read -a root <<< "${file_path}"
                 # root="${file_path##*/}"
                 echo "${file_path} and ${file_name} with root as ${root[0]}"
-                
-                # Identify files starting with retd_ for deletion
-                if [[ $file_name == retd_* ]]; then
-                   # Remove the 'retd_' prefix to find the actual file name to delete in S3
-                   original_name=${file_name#retd_}
-                   if [ "${root[0]}" = "dags" ]; then
-                     # If in dags root: dags/my_dag.py
-                     echo "dags/$original_name" >> ./delete_list.txt
-                   else
-                     # If in subfolders: dags/sql/folder/file.sql
-                     echo "dags/${file_path}/${original_name}" >> ./delete_list.txt
-                   fi
-                   echo "Marked for deletion: $original_name"
-                fi
-                
+
+                # Identify if the folder OR file starts with retd_
+                if [[ $file_name == retd_* || $file_path == *"/retd_"* || $file_path == "retd_"* ]]; then
+                  original_path=$(echo "${change_file}" | sed 's/retd_//g')
+                  echo "dags/${original_path}" >> ./delete_list.txt
+                  echo "Marked for deletion: dags/${original_path}"
+                  continue 
+                fi                
                 case  "${root[0]}" in 
                   "dags") 
                     echo "  > DAG loop:${file_path}/${file_name}."   
