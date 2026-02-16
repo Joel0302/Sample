@@ -87,7 +87,7 @@ jobs:
                 if [[ $file_name == retd_* || $file_path == *"/retd_"* || $file_path == "retd_"* ]]; then
                   original_path=$(echo "${change_file}" | sed 's/retd_//g')
                   echo "dags/${original_path}" >> ./delete_list.txt
-                  echo "Marked for deletion: dags/${original_path}
+                  echo "Marked for deletion: dags/${original_path}"
                   continue 
                 fi                
                 case  "${root[0]}" in 
