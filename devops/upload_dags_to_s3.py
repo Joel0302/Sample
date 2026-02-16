@@ -75,7 +75,8 @@ def delete_s3_prefix(bucket, prefix):
             delete_keys = [{'Key': obj['Key']} for obj in page['Contents']]
             s3_client.delete_objects(Bucket=bucket, Delete={'Objects': delete_keys})
             print(f"Deleted batch of files from: {prefix}")
-
+            
+delete_list_path = "./delete_list.txt"
 # --- UPDATED DELETION PROCESS ---
 if os.path.exists(delete_list_path):
     with open(delete_list_path, "r") as f:
