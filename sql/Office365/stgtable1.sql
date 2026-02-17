@@ -1,1 +1,0 @@
-select 'o365stg';

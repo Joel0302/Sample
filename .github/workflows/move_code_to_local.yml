@@ -85,11 +85,18 @@ jobs:
 
                 # Identify if the folder OR file starts with retd_
                 if [[ $file_name == retd_* || $file_path == *"/retd_"* || $file_path == "retd_"* ]]; then
+                  # 1. Strip 'retd_' from the entire path to find the target in S3
+                  # Example: dags/sql/retd_omni/file.sql -> dags/sql/omni/file.sql
                   original_path=$(echo "${change_file}" | sed 's/retd_//g')
+                  # 2. Add to delete list
                   echo "dags/${original_path}" >> ./delete_list.txt
-                  echo "Marked for deletion: dags/${original_path}"
+                  # 3. If it was a folder rename, also add the folder path itself to ensure prefix deletion
+                  # Example: if file_path was sql/retd_omni, we add dags/sql/omni
+                  original_dir=$(echo "${file_path}" | sed 's/retd_//g')
+                  echo "dags/${original_dir}" >> ./delete_list.txt 
+                  echo "Marked for deletion in S3: ${original_path}"
                   continue 
-                fi                
+                  fi         
                 case  "${root[0]}" in 
                   "dags") 
                     echo "  > DAG loop:${file_path}/${file_name}."   

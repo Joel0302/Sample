@@ -64,7 +64,36 @@ if os.path.exists(directory):
                 s3_client.upload_file(f, s3bucket, "dags/sql" + filekey)
             except Exception as e:
                 print(f"Error uploading {file}: {e}")
+                
+def delete_s3_prefix(bucket, prefix):
+    """Deletes all objects in S3 starting with the given prefix (folder)."""
+    paginator = s3_client.get_paginator('list_objects_v2')
+    pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
 
+    for page in pages:
+        if 'Contents' in page:
+            delete_keys = [{'Key': obj['Key']} for obj in page['Contents']]
+            s3_client.delete_objects(Bucket=bucket, Delete={'Objects': delete_keys})
+            print(f"Deleted folder contents: {prefix}")
+            
+delete_list_path = "./delete_list.txt"
+# --- DELETION PROCESS ---
+if os.path.exists(delete_list_path):
+    with open(delete_list_path, "r") as f:
+        # Use set() to avoid deleting the same thing twice
+        delete_targets = set(line.strip() for line in f if line.strip())
+        
+        for target in delete_targets:
+            # If target has an extension, it's a file. If not, it's a folder.
+            if "." in os.path.basename(target):
+                print(f"Deleting file: {target}")
+                s3_client.delete_object(Bucket=s3bucket, Key=target)
+            else:
+                # It's a folder: ensure it ends with / and delete prefix
+                prefix = target if target.endswith('/') else target + '/'
+                print(f"Deleting folder prefix: {prefix}")
+                delete_s3_prefix(s3bucket, prefix)
+'''
 def delete_s3_prefix(bucket, prefix):
     """Deletes all objects in S3 starting with the given prefix (folder)."""
     paginator = s3_client.get_paginator('list_objects_v2')
@@ -91,6 +120,7 @@ if os.path.exists(delete_list_path):
                 # Ensure folder prefix ends with /
                 folder_prefix = target if target.endswith('/') else target + '/'
                 delete_s3_prefix(s3bucket, folder_prefix)
+'''
 '''
 delete_list_path = "./delete_list.txt" 
 if os.path.exists(delete_list_path):
