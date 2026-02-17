@@ -83,13 +83,20 @@ jobs:
                 # root="${file_path##*/}"
                 echo "${file_path} and ${file_name} with root as ${root[0]}"
 
-                # Identify if the folder OR file starts with retd_
                 if [[ $file_name == retd_* || $file_path == *"/retd_"* || $file_path == "retd_"* ]]; then
                   original_path=$(echo "${change_file}" | sed 's/retd_//g')
-                  echo "dags/${original_path}" >> ./delete_list.txt
-                  echo "Marked for deletion: dags/${original_path}"
+                  # 2. If a folder was renamed, we want to delete the whole folder prefix in S3
+                  # We extract the part of the path that was marked retd_
+                  if [[ $file_path == *"retd_"* ]]; then
+                    # Extract up to the retd_ folder
+                    delete_target=$(echo "dags/${change_file}" | sed 's/\/retd_[^\/]*\/.*/\/'$(echo $file_path | grep -o "retd_[^/]*" | sed 's/retd_//')'/')
+                    echo "$delete_target" >> ./delete_list.txt
+                  else
+                    echo "dags/${original_path}" >> ./delete_list.txt
+                  fi
+                  echo "Marked for deletion: ${original_path}"
                   continue 
-                fi                
+                fi             
                 case  "${root[0]}" in 
                   "dags") 
                     echo "  > DAG loop:${file_path}/${file_name}."   
