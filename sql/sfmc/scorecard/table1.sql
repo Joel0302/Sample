@@ -1,1 +1,1 @@
-select 'sfmcscore';
+select 'sfmcscorecard';
