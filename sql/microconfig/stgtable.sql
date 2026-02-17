@@ -1,1 +1,1 @@
-select 'config';
+select 'confignaming';
