@@ -1,1 +1,2 @@
-select 'mi';
+select 'mi' ;
+select 'mi' ;
