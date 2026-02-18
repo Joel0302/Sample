@@ -21,29 +21,41 @@ def delete_s3_prefix(bucket, prefix):
         if 'Contents' in page:
             delete_keys = [{'Key': obj['Key']} for obj in page['Contents']]
             s3_client.delete_objects(Bucket=bucket, Delete={'Objects': delete_keys})
-            print(f"Deleted folder contents: {prefix}")
+            print(f"  --> Deleted folder contents: {prefix}")
 
-# --- SECTION 1: DELETIONS (Run this FIRST) ---
+# --- SECTION 1: DYNAMIC DELETIONS ---
 delete_list_path = "./delete_list.txt"
 
 if os.path.exists(delete_list_path):
     with open(delete_list_path, "r") as f:
-        # Use set() to avoid deleting the same thing twice
+        # Use set() to avoid duplicate API calls if multiple files in one folder are marked
         delete_targets = set(line.strip() for line in f if line.strip())
         
         for target in delete_targets:
-            # LOGIC: If target has a dot in the filename, it's a file. Otherwise, it's a folder.
-            if "." in os.path.basename(target):
-                print(f"Deleting file: {target}")
-                try:
-                    s3_client.delete_object(Bucket=s3bucket, Key=target)
-                except Exception as e:
-                    print(f"File {target} not found or error: {e}")
-            else:
-                # It's a folder: ensure it ends with / for S3 prefix matching
-                prefix = target if target.endswith('/') else target + '/'
-                print(f"Deleting folder prefix: {prefix}")
+            # 1. Clean the path: Remove 'retd_' from any part of the path string
+            # e.g., 'sql/retd_omni/file.sql' -> ['sql', 'omni', 'file.sql']
+            parts = target.split('/')
+            clean_parts = [p.replace('retd_', '') for p in parts]
+            clean_path = "/".join(clean_parts)
+            
+            # 2. Ensure S3 Root: Prepend 'dags/' if missing
+            if not clean_path.startswith('dags/'):
+                clean_path = f"dags/{clean_path}"
+
+            # 3. Logic: Determine if we delete a specific file or a whole folder
+            # If 'retd_' was in a folder name (any part except the last) OR no extension exists
+            is_folder = any(p.startswith('retd_') for p in parts[:-1]) or "." not in os.path.basename(target)
+
+            if is_folder:
+                prefix = clean_path if clean_path.endswith('/') else f"{clean_path}/"
+                print(f"Action: Deleting Folder Prefix -> {prefix}")
                 delete_s3_prefix(s3bucket, prefix)
+            else:
+                print(f"Action: Deleting Single File -> {clean_path}")
+                try:
+                    s3_client.delete_object(Bucket=s3bucket, Key=clean_path)
+                except Exception as e:
+                    print(f"  --> Error: {clean_path} not found or: {e}")
 
 # --- SECTION 2: UPLOADS ---
 
