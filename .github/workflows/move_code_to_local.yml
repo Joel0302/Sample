@@ -83,21 +83,23 @@ jobs:
                 # root="${file_path##*/}"
                 echo "${file_path} and ${file_name} with root as ${root[0]}"
 
-               # --- 1. HANDLE FOLDER DELETION ---
-               # If any part of the path has retd_, we treat the whole directory as deleted
-               if [[ "$file_path" == *"retd_"* ]]; then
-                clean_folder=$(echo "$file_path" | sed 's/retd_//g')
-                echo "dags/$clean_folder" >> ./delete_list.txt
-                continue 
-               fi
+                # --- 1. HANDLE FOLDER DELETION ---
+                if [[ "$file_path" == *"retd_"* ]]; then
+                  # If file_path is "dags/retd_myfolder", this removes "retd_" 
+                  # but keeps the rest of the path intact.
+                  clean_path=$(echo "$file_path" | sed 's/retd_//g')
+                  echo "$clean_path" >> ./delete_list.txt
+                  continue 
+                fi
 
-               # --- 2. HANDLE INDIVIDUAL FILE DELETION ---
-               # If only the filename has retd_, we delete just that file
-               if [[ "$file_name" == retd_* ]]; then
-                 clean_file_name=$(echo "$file_name" | sed 's/retd_//')
-                 echo "dags/$file_path/$clean_file_name" >> ./delete_list.txt
-                 continue 
-               fi   
+                # --- 2. HANDLE INDIVIDUAL FILE DELETION ---
+                if [[ "$file_name" == retd_* ]]; then
+                  clean_file_name=$(echo "$file_name" | sed 's/retd_//')
+                  # Ensure we don't double up on the 'dags/' prefix
+                  echo "$file_path/$clean_file_name" >> ./delete_list.txt
+                  continue 
+                fi
+               
                 case  "${root[0]}" in 
                   "dags") 
                     echo "  > DAG loop:${file_path}/${file_name}."   
