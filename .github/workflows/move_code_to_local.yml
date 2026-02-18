@@ -83,20 +83,10 @@ jobs:
                 # root="${file_path##*/}"
                 echo "${file_path} and ${file_name} with root as ${root[0]}"
 
-                # --- 1. HANDLE FOLDER DELETION ---
-                if [[ "$file_path" == *"retd_"* ]]; then
-                  # If file_path is "dags/retd_myfolder", this removes "retd_" 
-                  # but keeps the rest of the path intact.
-                  clean_path=$(echo "$file_path" | sed 's/retd_//g')
-                  echo "$clean_path" >> ./delete_list.txt
-                  continue 
-                fi
-
-                # --- 2. HANDLE INDIVIDUAL FILE DELETION ---
-                if [[ "$file_name" == retd_* ]]; then
-                  clean_file_name=$(echo "$file_name" | sed 's/retd_//')
-                  # Ensure we don't double up on the 'dags/' prefix
-                  echo "$file_path/$clean_file_name" >> ./delete_list.txt
+               # --- DYNAMIC RETIREMENT / DELETION LOGIC ---
+                if [[ "$change_file" == *"retd_"* ]]; then
+                  echo "Found retirement marker in: $change_file"
+                  echo "$change_file" >> ./delete_list.txt
                   continue 
                 fi
                
