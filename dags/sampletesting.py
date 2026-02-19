@@ -1,2 +1,2 @@
-a=variablesample
+a=variablesampled
 print("Success")

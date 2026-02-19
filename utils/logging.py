@@ -1,1 +1,1 @@
-print("Log")
+print("Log!!")
