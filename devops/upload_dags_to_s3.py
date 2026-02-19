@@ -30,7 +30,31 @@ if os.path.exists(delete_list_path):
     with open(delete_list_path, "r") as f:
         # Use set() to avoid duplicate API calls if multiple files in one folder are marked
         delete_targets = set(line.strip() for line in f if line.strip())
-        
+
+        for target in delete_targets:
+            parts = target.split('/')
+            # Clean the path for S3 (remove all retd_ markers)
+            clean_path = "/".join([p.replace('retd_', '') for p in parts])
+            
+            if not clean_path.startswith('dags/'):
+                clean_path = f"dags/{clean_path}"
+
+            # CHECK: If 'retd_' is in any part of the folder structure
+            # OR if the target doesn't look like a file (no dot)
+            is_folder_deletion = any(p.startswith('retd_') for p in parts[:-1]) or "." not in parts[-1]
+
+            if is_folder_deletion:
+                # If folder was 'sql/retd_omni/file.sql', prefix becomes 'dags/sql/omni/'
+                prefix = clean_path if is_folder_deletion and "." not in parts[-1] else "/".join(clean_path.split('/')[:-1]) + "/"
+                print(f"Action: Deleting ENTIRE Folder -> {prefix}")
+                delete_s3_prefix(s3bucket, prefix)
+            else:
+                print(f"Action: Deleting Single File -> {clean_path}")
+                try:
+                    s3_client.delete_object(Bucket=s3bucket, Key=clean_path)
+                except Exception as e:
+                    print(f"Error: {e}")
+        '''
         for target in delete_targets:
             # 1. Clean the path: Remove 'retd_' from any part of the path string
             # e.g., 'sql/retd_omni/file.sql' -> ['sql', 'omni', 'file.sql']
@@ -56,7 +80,7 @@ if os.path.exists(delete_list_path):
                     s3_client.delete_object(Bucket=s3bucket, Key=clean_path)
                 except Exception as e:
                     print(f"  --> Error: {clean_path} not found or: {e}")
-
+        '''   
 # --- SECTION 2: UPLOADS ---
 
 # 1. Root DAGs (temp_dags/)
