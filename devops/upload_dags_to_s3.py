@@ -46,9 +46,9 @@ if os.path.exists(delete_list_path):
                 try:
                     s3_client.delete_object(Bucket=s3bucket, Key=clean_path)
                 except Exception as e:
+                    print(f"Error deleting file {clean_path}: {e}")
 
-#upload part
-# 1. Root DAGs (temp_dags/) 
+#Root DAGs (temp_dags/) 
 directory = "temp_dags"
 if os.path.exists(directory):
     for filename in os.listdir(directory):
