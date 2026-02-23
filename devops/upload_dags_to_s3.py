@@ -26,6 +26,8 @@ if os.path.exists(delete_list_path):
             #Remove the 'retd_' marker from the path segments to find the real S3 path
             parts = target.split('/')
             clean_path = "/".join([p.replace('retd_', '') for p in parts])
+            if not clean_path.startswith('dags/'):
+                clean_path = f"dags/{clean_path}"
             #Is it a folder or a single file / If there's no dot in the last part, it's a folder
             is_folder = "." not in parts[-1]
             if is_folder:
