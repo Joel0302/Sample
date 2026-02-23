@@ -83,7 +83,7 @@ jobs:
                 # root="${file_path##*/}"
                 echo "${file_path} and ${file_name} with root as ${root[0]}"
 
-               # --- DYNAMIC RETIREMENT / DELETION LOGIC ---
+               # Deletion Logic 
                 if [[ "$change_file" == *"retd_"* ]]; then
                   echo "Found retirement marker in: $change_file"
                   echo "$change_file" >> ./delete_list.txt
