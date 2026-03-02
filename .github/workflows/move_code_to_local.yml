@@ -1,132 +1,95 @@
-name: Move-Code-To-Deploy-QA
-# on:  [push]   
-on:    
-  push: 
+name: Master-Script-Workflow
+on:
+  push:
     branches:
       - 'QA'
-    paths:
-      - 'dags/**'
-      - 'utils/**'
-      - 'sql/**'
-      - 'plugins/**'
-  # move code only where there is pull request into QA Branch.
   pull_request:
     branches:
       - 'QA'
-    paths:
-    - 'dags/**'
-    - 'utils/**'
-    - 'sql/**'   
-    - 'plugins/**'   
-  workflow_dispatch:
 
-jobs:  
-   Move-Code-To-Deploy-QA: 
+jobs:
+  Create-Final-Master:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3         
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  
-        
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.8' 
-          
-      - name: Install dependencies
-        run:  |
-          python -m pip install --upgrade pip
-          
-      - name: 1Find Difference between branch and commit
-        id: Finddiff        
-        run:  echo "fileswithdepth=$(git diff --name-status ${{ github.event.before }} ${{ github.sha }} | xargs)" >> $GITHUB_OUTPUT
-        #run:  echo "::set-output name=fileswithdepth::$(git diff --name-status ${{ github.event.before }} ${{ github.sha }} | xargs)"          
-        #run:  echo "::set-output name=fileswithdepth::$(git diff --name-only origin/main origin/${GITHUB_HEAD_REF} | xargs)"          
-        shell: bash
-      - name: 2get changed files
-        id: getfile
+          fetch-depth: 0
+
+      - name: Generate Master Script
         run: |
-          echo "files=$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | xargs)" >> $GITHUB_OUTPUT
-          #echo "::set-output name=files::$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | xargs)"
-      - name: 2echo output
-        run: |
-          echo ${{ steps.getfile.outputs.files }}         
-      - name: Move the files to temp directory
-        id: Movefiles    
-        run:  |        
-          echo "Files in previous versus current version: ${{ steps.Finddiff.outputs.fileswithdepth }} "    
-          # echo "Files modified in current check in: ${{steps.files.outputs.added_modified}} "
-          mkdir -p temp_dags/{utils,plugins,sql}  
-          
-          # CREATE THE FILE OUTSIDE temp_dags
-          touch ./delete_list.txt
-          
-          myarray="${{ steps.Finddiff.outputs.fileswithdepth }}"
-          changelist=(${myarray// / })
-          len=${#changelist[@]}
-          echo "${myarray} has ${len} elements"    
-          for ((i=0; i<${len}; i++)) ; do
-            case "${changelist[$i]}" in
-              A | M | C | T | "R100" )
-                if [ "${changelist[$i]}" = "R100" ]; then  
-                  change_file="${changelist[$i+2]}"
-                  file_path=$(dirname "${changelist[$i+2]}")
-                  file_name=$(basename "${changelist[$i+2]}")
-                else
-                  change_file="${changelist[$i+1]}"
-                  file_path=$(dirname "${changelist[$i+1]}")
-                  file_name=$(basename "${changelist[$i+1]}") 
+          RELEASE_DIR="RELEASE_SCRIPTS"
+          SPRINT_FOLDER="${{ vars.SPRINT_NAME }}"
+          TARGET_DIR="$RELEASE_DIR/$SPRINT_FOLDER"
+          mkdir -p "$TARGET_DIR"
+
+          # 1. Identify Changes
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            DIFF_REF="origin/${{ github.base_ref }}...HEAD"
+          else
+            DIFF_REF="HEAD^ HEAD"
+          fi
+
+          CHANGED_FILES=$(git diff --name-only $DIFF_REF -- \
+            'DBO_WINGSPAN_ANALYTICS/VIEWS/*.sql' \
+            'BI_WINGSPAN_ANALYTICS/VIEWS/*.sql' \
+            'STG_WINGSPAN_ANALYTICS/TABLES/*.sql' \
+            'CERTIFIED_BUSINESS_WINGSPAN_ANALYTICS/VIEWS/*.sql' \
+            'CI_WINGSPAN_ANALYTICS/VIEWS/*.sql' \
+            'MPARTICLE_WINGSPAN_INTEGRATION/VIEWS/*.sql' \
+            "$TARGET_DIR/Adhoc_Scripts*.sql" \
+            "$TARGET_DIR/Grants.sql" || true)
+
+          # 2. Categorize and Sort
+          # sort ensures Adhoc_Scripts.sql is processed before Adhoc_Scripts_part02.sql
+          ADHOC_LIST=$(echo "$CHANGED_FILES" | grep "Adhoc_Scripts" | sort || true)
+          OTHER_CHANGES=$(echo "$CHANGED_FILES" | grep -vE "Adhoc_Scripts|Grants.sql" || true)
+          HAS_GRANTS=$(echo "$CHANGED_FILES" | grep -q "Grants.sql" && echo "true" || echo "false")
+
+          # 3. Versioning Setup
+          EXISTING_COUNT=$(ls "$TARGET_DIR"/DDL_Scripts_2026-W04_V*.sql 2>/dev/null | wc -l)
+          NEXT_VAL=$((EXISTING_COUNT + 1))
+
+          # 4. Generate Scripts
+          LOOP_COUNT=0
+          if [ -n "$ADHOC_LIST" ]; then
+            for adhoc_file in $ADHOC_LIST; do
+              CURRENT_V=$((NEXT_VAL + LOOP_COUNT))
+              MASTER_PATH="$TARGET_DIR/DDL_Scripts_2026-W04_V${CURRENT_V}.sql"
+              
+              # Add the Adhoc content
+              echo -e "-- SECTION: ADHOC --\n-- Source: $adhoc_file --" >> "$MASTER_PATH"
+              cat "$adhoc_file" >> "$MASTER_PATH"
+
+              # Only for the very first file in the loop, bundle other changes and grants
+              if [ $LOOP_COUNT -eq 0 ]; then
+                if [ -n "$OTHER_CHANGES" ]; then
+                  echo -e "\n-- SECTION: FOLDER CHANGES --" >> "$MASTER_PATH"
+                  for f in $OTHER_CHANGES; do 
+                    [ -f "$f" ] && cat "$f" >> "$MASTER_PATH" && echo -e "\n" >> "$MASTER_PATH"
+                  done
                 fi
-                 IFS='/'
-                read -a root <<< "${file_path}"
-                # root="${file_path##*/}"
-                echo "${file_path} and ${file_name} with root as ${root[0]}"
-
-               # Deletion Logic 
-                if [[ "$change_file" == *"retd_"* ]]; then
-                  echo "Found retirement marker in: $change_file"
-                  echo "$change_file" >> ./delete_list.txt
-                  continue 
+                if [ "$HAS_GRANTS" == "true" ]; then
+                  echo -e "\n-- SECTION: GRANTS --" >> "$MASTER_PATH"
+                  cat "$TARGET_DIR/Grants.sql" >> "$MASTER_PATH"
                 fi
-               
-                case  "${root[0]}" in 
-                  "dags") 
-                    echo "  > DAG loop:${file_path}/${file_name}."   
-                    cp "${change_file}" temp_dags/ 
-                    ;;
-                  sql |  utils) 
-                    echo "  > OUT loop:${file_path}/${file_name}." 
-                    mkdir -p temp_dags/${file_path}  
-                    cp --parents "${change_file}" "temp_dags"   
-                    echo "file temp_dags/${file_path}  created"
-                    ;; 
-                esac
-                ;;
-              R | D)
-                echo "-- ${changelist[$i+1]} no action done. "
-                ;;
-              esac
-          done
-          
-          #cp utils/* temp_dags/utils/
-          #cp plugins/* temp_dags/plugins/
-          ls -R temp_dags/
-          cd temp_dags
-        
-        
-      - name: Upload and Delete S3
-        id: upload # specify some ID for use in subsequent steps
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION}}  
-          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET_PROD }}   
-          DEVOPS_DIR: devops 
-          directory: "temp_dags"
+              fi
+              LOOP_COUNT=$((LOOP_COUNT + 1))
+            done
+          else
+            # Fallback: If no Adhoc scripts changed, put folder/grants in one script
+            if [ -n "$OTHER_CHANGES" ] || [ "$HAS_GRANTS" == "true" ]; then
+              MASTER_PATH="$TARGET_DIR/DDL_Scripts_2026-W04_V${NEXT_VAL}.sql"
+              for f in $OTHER_CHANGES; do [ -f "$f" ] && cat "$f" >> "$MASTER_PATH"; done
+              [ "$HAS_GRANTS" == "true" ] && cat "$TARGET_DIR/Grants.sql" >> "$MASTER_PATH"
+            fi
+          fi
+
+      - name: Push changes
+        if: github.event_name == 'push'
         run: |
-          pip install boto3
-          python ${{ env.DEVOPS_DIR }}/upload_dags_to_s3.py
-
-
-
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "Auto-generated consolidated DDL phase scripts [skip ci]" || exit 0
+          git push origin HEAD:${{ github.ref_name }}
