@@ -28,12 +28,12 @@ jobs:
         uses: actions/checkout@v3         
         with:
           fetch-depth: 0  
-        
+
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
           python-version: '3.8' 
-          
+
       - name: Install dependencies
         run:  |
           python -m pip install --upgrade pip
@@ -83,13 +83,13 @@ jobs:
                 # root="${file_path##*/}"
                 echo "${file_path} and ${file_name} with root as ${root[0]}"
 
-                # --- DYNAMIC RETIREMENT / DELETION LOGIC ---
+               # Deletion Logic 
                 if [[ "$change_file" == *"retd_"* ]]; then
                   echo "Found retirement marker in: $change_file"
                   echo "$change_file" >> ./delete_list.txt
                   continue 
                 fi
-                
+               
                 case  "${root[0]}" in 
                   "dags") 
                     echo "  > DAG loop:${file_path}/${file_name}."   
@@ -127,6 +127,3 @@ jobs:
         run: |
           pip install boto3
           python ${{ env.DEVOPS_DIR }}/upload_dags_to_s3.py
-
-
-

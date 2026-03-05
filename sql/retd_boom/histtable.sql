@@ -1,1 +1,1 @@
-select * from historytable;
+select * from historytable1dead;
