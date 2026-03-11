@@ -16,15 +16,9 @@ s3_client = boto3.client("s3", region_name="us-east-1", aws_access_key_id=key, a
 delete_list_path = "./delete_list.txt"
 if os.path.exists(delete_list_path):
     with open(delete_list_path, "r") as f:
-        #cleaning up empty spaces and newline characters
-        delete_targets = []  
-        for line in f:
-            cleaned_line = line.strip()
-            if cleaned_line:
-                delete_targets.append(cleaned_line)
-        for target in delete_targets:
+        for target in f:
             #Remove the 'retd_' marker from the path segments to find the real S3 path
-            parts = target.split('/')
+            parts = target.strip().split('/')
             clean_path = "/".join([p.replace('retd_', '') for p in parts])
             if not clean_path.startswith('dags/'):
                 clean_path = f"dags/{clean_path}"
