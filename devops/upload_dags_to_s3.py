@@ -2,17 +2,14 @@ from posixpath import dirname
 import boto3
 import os
 import sys
-
 from botocore.exceptions import ClientError
 
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "../temp_dags"))
-# Creating S3 Resource From the Session.
-#print(os.environ)
+# Credentials from Environment Variables
 key = os.environ.get("AWS_ACCESS_KEY_ID")
 pwd = os.environ.get("AWS_SECRET_ACCESS_KEY")
 s3bucket = os.environ.get("AWS_S3_BUCKET")
-#print(key)
+
+# Initialize S3 Client
 s3_client = boto3.client("s3", region_name="us-east-1", aws_access_key_id=key, aws_secret_access_key=pwd)
 
 # Deletion part
@@ -47,70 +44,49 @@ if os.path.exists(delete_list_path):
                 except Exception as e:
                     print(f"Error deleting file {clean_path}: {e}")
 
+#Root DAGs (temp_dags/) 
 directory = "temp_dags"
-for filename in os.listdir(directory):
-    if filename.startswith("retd_"):
+if os.path.exists(directory):
+    for filename in os.listdir(directory):
+        if filename.startswith("retd_"):
             continue
-    f = os.path.join(directory, filename)
-    # checking if it is a file
-    if os.path.isfile(f):
-        print(f)
-        try:
-            response = s3_client.upload_file(f, s3bucket, "dags/" + filename)
-        except ClientError as e:
-            print(e)
-        except FileNotFoundError as e:
-            print(e)
-directory = "temp_dags/utils"
-for filename in os.listdir(directory):
-    if filename.startswith("retd_"):
-            continue
-    f = os.path.join(directory, filename)
-    # checking if it is a file
-    if os.path.isfile(f):
-        print(f)
-        try:
-            response = s3_client.upload_file(f, s3bucket, "dags/utils/" + filename)
-        except ClientError as e:
-            print(e)
-        except FileNotFoundError as e:
-            print(e)
-
-directory = "temp_dags/sql"
-for root,dirname,filename in os.walk(directory):
-    for file in filename:
-        if file.startswith("retd_"):
-            continue
-        print(root)
-        print(dirname)
-        print(file)
-        f = os.path.join(root, file)
-         # checking if it is a file
+            
+        f = os.path.join(directory, filename)
         if os.path.isfile(f):
-            print(f)
-        try:
-            filekey=f.replace(directory,"")
-            print(filekey)
-            response = s3_client.upload_file(f, s3bucket, "dags/sql" +filekey)
-        except ClientError as e:
-            print(e)
-        except FileNotFoundError as e:
-            print(e)
+            try:
+                print(f"Uploading root file: {f}")
+                s3_client.upload_file(f, s3bucket, "dags/" + filename)
+            except Exception as e:
+                print(f"Error uploading {filename}: {e}")
 
-#for filename in os.listdir(directory):
-#    f = os.path.join(directory, filename)
-    # checking if it is a file
-#if os.path.isfile(f):
-#        print(f)
-#        try:
-#            response = s3_client.upload_file(f, s3bucket, "dags/sql/" + filename)
-#        except ClientError as e:
-#            print(e)
-#        except FileNotFoundError as e:
-#            print(e)
+# 2. Utils (temp_dags/utils/)
+directory = "temp_dags/utils"
+if os.path.exists(directory):
+    for filename in os.listdir(directory):
+        if filename.startswith("retd_"):
+            continue
+            
+        f = os.path.join(directory, filename)
+        if os.path.isfile(f):
+            try:
+                print(f"Uploading utils file: {f}")
+                s3_client.upload_file(f, s3bucket, "dags/utils/" + filename)
+            except Exception as e:
+                print(f"Error uploading {filename}: {e}")
 
-#for root,d_names,f_names in os.walk(path):#
-	#for f in f_names:
-
-
-
+# 3. SQL (temp_dags/sql/ - Recursive)
+directory = "temp_dags/sql"
+if os.path.exists(directory):
+    for root, sub_dirs, filenames in os.walk(directory):
+        for file in filenames:
+            if file.startswith("retd_"):
+                continue
+                
+            f = os.path.join(root, file)
+            try:
+                # This logic correctly maps temp_dags/sql/folder/file -> dags/sql/folder/file
+                filekey = f.replace("temp_dags/sql/", "") # Added / to avoid double slashes
+                print(f"Uploading sql file: {f} to Key: dags/sql/{filekey}")
+                s3_client.upload_file(f, s3bucket, "dags/sql/" + filekey)
+            except Exception as e:
+                print(f"Error uploading {file}: {e}")
